@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from app import config, core
 
@@ -110,13 +111,29 @@ async def ask(req: AskRequest, request: Request) -> StreamingResponse:
 
 
 @app.get("/health")
-async def health(request: Request) -> dict:
-    """Readiness check: both the database and Ollama must respond."""
+async def health(request: Request) -> JSONResponse:
+    """Readiness check: report the status of each dependency without exposing internals."""
+    state = request.app.state
+    checks = {}
+
     try:
-        async with request.app.state.pool.connection(timeout=3) as conn:
+        async with state.pool.connection(timeout=3) as conn:
             await conn.execute("SELECT 1")
-        resp = await request.app.state.client.get(f"{config.OLLAMA_URL}/api/version", timeout=3)
-        resp.raise_for_status()
+        checks["database"] = "ok"
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"Dependency unavailable: {type(exc).__name__}")
-    return {"status": "ok"}
+        log.warning("Health check: database unavailable (%s)", type(exc).__name__)
+        checks["database"] = "down"
+
+    try:
+        resp = await state.client.get(f"{config.OLLAMA_URL}/api/version", timeout=3)
+        resp.raise_for_status()
+        checks["ollama"] = "ok"
+    except Exception as exc:
+        log.warning("Health check: Ollama unavailable (%s)", type(exc).__name__)
+        checks["ollama"] = "down"
+
+    healthy = all(status == "ok" for status in checks.values())
+    return JSONResponse(
+        {"status": "ok" if healthy else "degraded", **checks},
+        status_code=200 if healthy else 503,
+    )
