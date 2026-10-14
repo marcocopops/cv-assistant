@@ -2,7 +2,12 @@
 // Answers stream as Server-Sent Events over a POST request. EventSource only
 // supports GET, so the stream is read with fetch() and parsed by hand.
 
-const API_URL = document.querySelector('meta[name="assistant-api"]').content;
+// Local development reaches the API through an SSH tunnel; production uses the public endpoint.
+const IS_LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
+const API_URL = IS_LOCAL
+  ? "http://localhost:8000"
+  : document.querySelector('meta[name="assistant-api"]').content;
+
 const LANG = document.documentElement.lang;
 
 const TEXTS = {
@@ -78,6 +83,8 @@ async function ask(question) {
     try {
       response = await fetch(`${API_URL}/ask`, {
         method: "POST",
+        // Send the Cloudflare Access cookie while the API sits behind Access (pre-launch).
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question, lang: LANG }),
       });

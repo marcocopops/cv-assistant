@@ -6,10 +6,8 @@
   <title>Marc-Antoine Meunier — Ingénieur logiciel</title>
   <meta name="description" content="CV de Marc-Antoine Meunier, ingénieur logiciel temps réel et systèmes embarqués.">
 
-  <!-- Assistant API endpoint. Must also be listed in connect-src below. -->
-  <meta name="assistant-api" content="http://localhost:8000">
-  <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; connect-src 'self' http://localhost:8000; base-uri 'self'; form-action 'none'">
+  <!-- Production API endpoint; chat.js switches to localhost during development. -->
+  <meta name="assistant-api" content="https://api.marcantoine-meunier.com">
 
   <link rel="stylesheet" href="style.css">
   <script src="chat.js" defer></script>
