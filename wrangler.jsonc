@@ -1,0 +1,10 @@
+{
+  // Must match the Worker name chosen in the Cloudflare dashboard.
+  "name": "marcantoine-meunier",
+  // Pins the runtime behaviour to this date, so platform changes never alter the site unexpectedly.
+  "compatibility_date": "2026-10-14",
+  // Assets-only Worker: no script, Cloudflare serves the files in ./site directly.
+  "assets": {
+    "directory": "./site"
+  }
+}
