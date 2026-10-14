@@ -201,7 +201,9 @@ async def answer(pool: AsyncConnectionPool, client: httpx.AsyncClient,
             "keep_alive": "30m",
             # num_ctx is set explicitly: Ollama silently drops the beginning
             # of a prompt that overflows the context window.
-            "options": {"temperature": 0.1, "num_predict": 200, "num_ctx": 4096},
+            # Deterministic decoding: identical questions get identical answers,
+            # which makes evaluation results reproducible.
+            "options": {"temperature": 0, "seed": 42, "num_predict": 200, "num_ctx": 4096},
         },
     ) as resp:
         resp.raise_for_status()
