@@ -35,6 +35,7 @@ services:
     networks:
       - default
       - llm
+      - edge
     depends_on:
       db:
         condition: service_healthy
@@ -57,4 +58,6 @@ services:
 
 networks:
   llm:
+    external: true
+  edge:
     external: true
