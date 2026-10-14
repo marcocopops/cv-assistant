@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from fastapi.responses import JSONResponse, StreamingResponse
+import ipaddress
 
 from app import config, core
 
@@ -53,6 +54,30 @@ class InferenceQueue:
             self._slot.release()
 
 
+class CloudflareClientIP:
+    """Replace the peer address with the visitor's real IP for requests coming through the tunnel.
+
+    Cloudflare always overwrites CF-Connecting-IP with the visitor's address, so the header
+    is trustworthy only when the request was forwarded by our own cloudflared container.
+    """
+
+    def __init__(self, app, trusted_proxy: str) -> None:
+        self.app = app
+        self.trusted_proxy = trusted_proxy
+
+    async def __call__(self, scope, receive, send):
+        client = scope.get("client")
+        if scope["type"] == "http" and self.trusted_proxy and client and client[0] == self.trusted_proxy:
+            for name, value in scope["headers"]:
+                if name == b"cf-connecting-ip":
+                    try:
+                        scope["client"] = (str(ipaddress.ip_address(value.decode("latin-1"))), 0)
+                    except ValueError:
+                        pass  # malformed value: keep the proxy address
+                    break
+        await self.app(scope, receive, send)
+
+
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     """Create shared resources at startup and close them cleanly at shutdown."""
@@ -72,6 +97,8 @@ app.add_middleware(
     allow_methods=["POST"],
     allow_headers=["Content-Type"],
 )
+
+app.add_middleware(CloudflareClientIP, trusted_proxy=config.TRUSTED_PROXY)
 
 class AskRequest(BaseModel):
     question: str = Field(min_length=3, max_length=500)
