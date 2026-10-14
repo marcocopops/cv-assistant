@@ -29,7 +29,7 @@ services:
       PGPASSWORD: ${PGPASSWORD}
       PGDATABASE: ${PGDATABASE}
       OLLAMA_URL: http://ollama:11434
-      ALLOWED_ORIGINS: http://localhost:8081
+      ALLOWED_ORIGINS: http://localhost:8081,https://marcantoine-meunier.com
     ports:
       - "127.0.0.1:8000:8000"
     networks:
