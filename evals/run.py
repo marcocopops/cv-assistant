@@ -1,6 +1,10 @@
-"""Evaluation harness: runs test cases against the RAG pipeline and reports failures.
+"""Evaluation harness: runs test cases against the RAG pipeline and reports results.
 
 Usage: python -m evals.run path/to/cases.toml
+
+The full report (every question and answer) is printed, and also written next to the
+cases file as evals-report.txt, overwriting the previous one. The written report has no
+timings, so two runs can be compared with a plain diff.
 
 Each case is a TOML table with:
   id               unique name
@@ -19,6 +23,7 @@ import sys
 import time
 import tomllib
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import httpx
 
@@ -27,10 +32,14 @@ from app import config, core
 # The model must never reveal how it works internally.
 LEAK_TERMS = ["excerpt", "extrait", "the text"]
 
+# Not a .md file on purpose: every .md file in the knowledge directory is indexed as content.
+REPORT_NAME = "evals-report.txt"
+
 
 @dataclass
 class Result:
     case_id: str
+    question: str
     top_score: float = 0.0
     answer: str = ""
     seconds: float = 0.0
@@ -46,7 +55,7 @@ def contains(text: str, term: str) -> bool:
 
 
 async def run_case(pool, client: httpx.AsyncClient, case: dict) -> Result:
-    result = Result(case["id"])
+    result = Result(case["id"], case["question"])
     start = time.monotonic()
 
     # Raw retrieval, before the threshold, to record the best score for calibration.
@@ -94,40 +103,57 @@ async def run_case(pool, client: httpx.AsyncClient, case: dict) -> Result:
     return result
 
 
-def print_calibration(cases: list[dict], results: list[Result]) -> None:
+def format_result(r: Result, with_timing: bool) -> list[str]:
+    """Render one case: status, full question, full answer, then any failures."""
+    timing = f"  {r.seconds:.1f} s" if with_timing else ""
+    lines = [
+        f"{'PASS' if r.passed else 'FAIL'}  {r.case_id}  score {r.top_score:.3f}{timing}",
+        f"  Q: {r.question}",
+        "  A: " + r.answer.replace("\n", "\n     "),
+    ]
+    lines += [f"  - {failure}" for failure in r.failures]
+    return lines + [""]
+
+
+def calibration_lines(cases: list[dict], results: list[Result]) -> list[str]:
     """Show which threshold values separate relevant questions from off-topic ones."""
     relevant = [r.top_score for c, r in zip(cases, results) if c.get("expect_source")]
     off_topic = [r.top_score for c, r in zip(cases, results) if c.get("gate") == "block"]
     if not relevant or not off_topic:
-        return
+        return []
     highest_off, lowest_relevant = max(off_topic), min(relevant)
-    print(f"\nThreshold: current {config.SCORE_THRESHOLD:.2f} | "
-          f"highest off-topic {highest_off:.3f} | lowest relevant {lowest_relevant:.3f}")
+    lines = [f"Threshold: current {config.SCORE_THRESHOLD:.2f} | "
+             f"highest off-topic {highest_off:.3f} | lowest relevant {lowest_relevant:.3f}"]
     if highest_off < lowest_relevant:
-        print(f"  Any value in ]{highest_off:.3f}, {lowest_relevant:.3f}] separates both groups "
-              f"(midpoint {(highest_off + lowest_relevant) / 2:.3f}).")
+        lines.append(f"  Any value in ]{highest_off:.3f}, {lowest_relevant:.3f}] separates both groups "
+                     f"(midpoint {(highest_off + lowest_relevant) / 2:.3f}).")
     else:
-        print("  The groups overlap: no threshold separates them. Improve the knowledge base.")
+        lines.append("  The groups overlap: no threshold separates them. Improve the knowledge base.")
+    return lines
 
 
 async def main(path: str) -> int:
-    with open(path, "rb") as f:
+    cases_file = Path(path)
+    with cases_file.open("rb") as f:
         cases = tomllib.load(f)["case"]
 
     results = []
     async with core.make_pool() as pool, httpx.AsyncClient(timeout=300) as client:
         for case in cases:  # sequential on purpose: the CPU runs one generation at a time
             r = await run_case(pool, client, case)
-            print(f"{'PASS' if r.passed else 'FAIL'}  {r.case_id:<28} score {r.top_score:.3f}  {r.seconds:5.1f} s")
-            for failure in r.failures:
-                print(f"      - {failure}")
-            if r.failures:
-                print(f"      answer: {r.answer[:200]!r}")
+            print("\n".join(format_result(r, with_timing=True)), flush=True)
             results.append(r)
 
     passed = sum(r.passed for r in results)
-    print(f"\n{passed}/{len(results)} cases passed")
-    print_calibration(cases, results)
+    summary = [f"{passed}/{len(results)} cases passed", *calibration_lines(cases, results)]
+    print("\n".join(summary))
+
+    # Deterministic report (no timings), overwritten on each run so successive runs can be diffed.
+    report = [line for r in results for line in format_result(r, with_timing=False)] + summary
+    report_file = cases_file.with_name(REPORT_NAME)
+    report_file.write_text("\n".join(report) + "\n", encoding="utf-8")
+    print(f"\nReport written to {report_file}")
+
     return 0 if passed == len(results) else 1
 
 
