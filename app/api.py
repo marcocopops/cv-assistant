@@ -12,6 +12,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from fastapi.responses import JSONResponse, StreamingResponse
 import ipaddress
+import time
+import anyio
 
 from app import config, core
 
@@ -54,6 +56,41 @@ class InferenceQueue:
             self._slot.release()
 
 
+INTERACTIONS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS interactions (
+    id            bigserial PRIMARY KEY,
+    created_at    timestamptz NOT NULL DEFAULT now(),
+    client_ip     inet,
+    country       text,
+    user_agent    text,
+    lang          text,
+    question      text NOT NULL,
+    answer        text NOT NULL DEFAULT '',
+    sources       text[] NOT NULL DEFAULT '{}',
+    top_score     real,
+    used_llm      boolean NOT NULL DEFAULT false,
+    status        text NOT NULL,
+    duration_ms   integer,
+    answer_tokens integer
+);
+CREATE INDEX IF NOT EXISTS interactions_created_at_idx ON interactions (created_at);
+"""
+
+async def record_interaction(pool, entry: dict) -> None:
+    """Store one question and its outcome. A failure is logged but never breaks the response."""
+    try:
+        async with pool.connection() as conn:
+            await conn.execute(
+                "INSERT INTO interactions (client_ip, country, user_agent, lang, question, answer, "
+                "sources, top_score, used_llm, status, duration_ms, answer_tokens) VALUES "
+                "(%(client_ip)s::inet, %(country)s, %(user_agent)s, %(lang)s, %(question)s, %(answer)s, "
+                "%(sources)s, %(top_score)s, %(used_llm)s, %(status)s, %(duration_ms)s, %(answer_tokens)s)",
+                entry,
+            )
+    except Exception:
+        log.exception("Could not record interaction")
+
+
 class CloudflareClientIP:
     """Replace the peer address with the visitor's real IP for requests coming through the tunnel.
 
@@ -86,6 +123,8 @@ async def lifespan(app: FastAPI):
         app.state.pool = pool
         app.state.client = client
         app.state.queue = InferenceQueue(config.MAX_WAITING)
+        async with pool.connection() as conn:
+            await conn.execute(INTERACTIONS_SCHEMA)
         yield
 
 
@@ -116,18 +155,42 @@ async def ask(req: AskRequest, request: Request) -> StreamingResponse:
     queue: InferenceQueue = state.queue
 
     async def events():
+        entry = {
+            "client_ip": request.client.host if request.client else None,
+            "country": request.headers.get("cf-ipcountry"),  # informational only
+            "user_agent": (request.headers.get("user-agent") or "")[:300],
+            "lang": req.lang, "question": req.question, "answer": "", "sources": [],
+            "top_score": None, "used_llm": False, "status": "cancelled",
+            "duration_ms": None, "answer_tokens": None,
+        }
+        parts = []
+        start = time.monotonic()
         try:
             if queue.busy and not queue.full:
                 yield sse("queued", {"position": queue.waiting + 1})
             async with queue.turn():
                 async for event, data in core.answer(state.pool, state.client, req.question, req.lang):
+                    if event == "meta":
+                        entry.update(lang=data["lang"], sources=data["sources"], top_score=data["score"])
+                        data = {k: v for k, v in data.items() if k != "score"}  # internal only
+                    elif event == "token":
+                        parts.append(data["text"])
+                    elif event == "done":
+                        entry.update(status="ok", used_llm=data["llm"], answer_tokens=data.get("answer_tokens"))
                     yield sse(event, data)
         except QueueFull:
+            entry["status"] = "busy"
             yield sse("busy", {"message": "The assistant is busy. Please try again in a moment."})
         except Exception:
-            # Full details in the server logs, a generic message for the visitor.
+            entry["status"] = "error"
             log.exception("Answer generation failed")
             yield sse("error", {"message": "The assistant is temporarily unavailable."})
+        finally:
+            entry["answer"] = "".join(parts)
+            entry["duration_ms"] = int((time.monotonic() - start) * 1000)
+            # Shielded: the record is written even when the visitor leaves and the task is cancelled.
+            with anyio.CancelScope(shield=True):
+                await record_interaction(state.pool, entry)
 
     return StreamingResponse(
         events(),

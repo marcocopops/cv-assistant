@@ -183,9 +183,11 @@ async def answer(pool: AsyncConnectionPool, client: httpx.AsyncClient,
                  question: str, fallback_lang: str = "fr") -> AsyncIterator[tuple[str, dict]]:
     """Answer a question, yielding events: meta, then token(s), then done."""
     lang = detect_lang(question, fallback_lang)
-    chunks = [c for c in await retrieve(pool, client, question)
-              if c.score >= config.SCORE_THRESHOLD]
-    yield "meta", {"lang": lang, "sources": [f"{c.source} > {c.heading}" for c in chunks]}
+    retrieved = await retrieve(pool, client, question)
+    chunks = [c for c in retrieved if c.score >= config.SCORE_THRESHOLD]
+    top_score = retrieved[0].score if retrieved else 0.0
+    yield "meta", {"lang": lang, "sources": [f"{c.source} > {c.heading}" for c in chunks],
+                   "score": round(top_score, 3)}
 
     if not chunks:
         # Nothing relevant enough: answer without calling the LLM at all.
