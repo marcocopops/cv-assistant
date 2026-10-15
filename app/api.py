@@ -171,7 +171,8 @@ async def ask(req: AskRequest, request: Request) -> StreamingResponse:
             async with queue.turn():
                 async for event, data in core.answer(state.pool, state.client, req.question, req.lang):
                     if event == "meta":
-                        entry.update(lang=data["lang"], sources=data["sources"], top_score=data["score"])
+                        entry.update(lang=data["lang"], sources=data["sources"], top_score=data["score"],
+                                     used_llm=bool(data["sources"]))  # the LLM is called whenever sections pass the threshold
                         data = {k: v for k, v in data.items() if k != "score"}  # internal only
                     elif event == "token":
                         parts.append(data["text"])

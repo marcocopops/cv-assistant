@@ -10,7 +10,7 @@ CHAT_MODEL = os.environ.get("CHAT_MODEL", "llama3.1:8b")
 KNOWLEDGE_DIR = Path(os.environ.get("KNOWLEDGE_DIR", Path(__file__).parent.parent / "knowledge"))
 
 TOP_K = 3
-SCORE_THRESHOLD = float(os.environ.get("SCORE_THRESHOLD", "0.40"))
+SCORE_THRESHOLD = float(os.environ.get("SCORE_THRESHOLD", "0.40"))  # calibrated on knowledge/evals.toml
 MAX_WAITING = int(os.environ.get("MAX_WAITING", "5"))
 ALLOWED_ORIGINS = [o for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o]
 TRUSTED_PROXY = os.environ.get("TRUSTED_PROXY", "")  # cloudflared's address on the edge network
