@@ -16,6 +16,7 @@ Each case is a TOML table with:
   expect_source    substring of a section heading that must be retrieved (optional)
   must_contain     terms that must all appear in the answer (optional)
   must_not_contain terms that must never appear in the answer (optional)
+  expected_failure true for a known, accepted failure: reported but not blocking (optional)
 """
 import argparse
 import asyncio
@@ -44,10 +45,17 @@ class Result:
     answer: str = ""
     seconds: float = 0.0
     failures: list[str] = field(default_factory=list)
+    expected_failure: bool = False
 
     @property
     def passed(self) -> bool:
         return not self.failures
+
+    @property
+    def status(self) -> str:
+        if self.expected_failure:
+            return "XPASS" if self.passed else "XFAIL"
+        return "PASS" if self.passed else "FAIL"
 
 
 def contains(text: str, term: str) -> bool:
@@ -56,6 +64,7 @@ def contains(text: str, term: str) -> bool:
 
 async def run_case(pool, client: httpx.AsyncClient, case: dict) -> Result:
     result = Result(case["id"], case["question"])
+    result.expected_failure = case.get("expected_failure", False)
     start = time.monotonic()
 
     # Raw retrieval, before the threshold, to record the best score for calibration.
@@ -107,7 +116,7 @@ def format_result(r: Result, with_timing: bool) -> list[str]:
     """Render one case: status, full question, full answer, then any failures."""
     timing = f"  {r.seconds:.1f} s" if with_timing else ""
     lines = [
-        f"{'PASS' if r.passed else 'FAIL'}  {r.case_id}  score {r.top_score:.3f}{timing}",
+        f"{r.status}  {r.case_id}  score {r.top_score:.3f}{timing}",
         f"  Q: {r.question}",
         "  A: " + r.answer.replace("\n", "\n     "),
     ]
@@ -145,7 +154,10 @@ async def main(path: str) -> int:
             results.append(r)
 
     passed = sum(r.passed for r in results)
-    summary = [f"{passed}/{len(results)} cases passed", *calibration_lines(cases, results)]
+    counts = {s: sum(r.status == s for r in results) for s in ("PASS", "FAIL", "XFAIL", "XPASS")}
+    summary = [f"{counts['PASS']} passed, {counts['FAIL']} failed, "
+               f"{counts['XFAIL']} known failures, {counts['XPASS']} known failures now passing",
+               *calibration_lines(cases, results)]
     print("\n".join(summary))
 
     # Deterministic report (no timings), overwritten on each run so successive runs can be diffed.
@@ -154,7 +166,8 @@ async def main(path: str) -> int:
     report_file.write_text("\n".join(report) + "\n", encoding="utf-8")
     print(f"\nReport written to {report_file}")
 
-    return 0 if passed == len(results) else 1
+    # A known failure that now passes also blocks: its expected_failure flag must be removed.
+    return 1 if counts["FAIL"] or counts["XPASS"] else 0
 
 
 if __name__ == "__main__":
