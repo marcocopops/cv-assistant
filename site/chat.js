@@ -83,8 +83,6 @@ async function ask(question) {
     try {
       response = await fetch(`${API_URL}/ask`, {
         method: "POST",
-        // Send the Cloudflare Access cookie while the API sits behind Access (pre-launch).
-        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question, lang: LANG }),
       });
