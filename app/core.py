@@ -77,7 +77,7 @@ async def embed(client: httpx.AsyncClient, texts: list[str]) -> np.ndarray:
     """Convert texts into embedding vectors using Ollama."""
     resp = await client.post(
         f"{config.OLLAMA_URL}/api/embed",
-        json={"model": config.EMBED_MODEL, "input": texts},
+        json={"model": config.EMBED_MODEL, "input": texts, "keep_alive": -1},
     )
     resp.raise_for_status()
     return np.array(resp.json()["embeddings"])
@@ -203,7 +203,8 @@ async def answer(pool: AsyncConnectionPool, client: httpx.AsyncClient,
             "model": config.CHAT_MODEL,
             "messages": build_messages(question, chunks, lang),
             "stream": True,
-            "keep_alive": "30m",
+            # Keep the model loaded permanently: a cold start costs visitors 30+ seconds.
+            "keep_alive": -1,
             # num_ctx is set explicitly: Ollama silently drops the beginning
             # of a prompt that overflows the context window.
             # Deterministic decoding: identical questions get identical answers,
