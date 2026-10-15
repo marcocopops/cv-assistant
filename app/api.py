@@ -132,7 +132,6 @@ app = FastAPI(title="CV assistant", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=config.ALLOWED_ORIGINS,
-    allow_credentials=True,  # needed while the API sits behind Cloudflare Access
     allow_methods=["POST"],
     allow_headers=["Content-Type"],
 )
