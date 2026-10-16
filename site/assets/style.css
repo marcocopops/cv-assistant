@@ -158,9 +158,9 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 @keyframes fade-in { from { opacity: 0; transform: translateY(4px); } }
 @keyframes pulse { 50% { opacity: .4; } }
 
-@media (prefers-reduced-motion: reduce) {
+/* @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; }
-}
+} */
 
 .visually-hidden {
   position: absolute;

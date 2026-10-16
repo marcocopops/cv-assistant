@@ -8,7 +8,7 @@ const API_URL = IS_LOCAL
   ? "http://localhost:8000"
   : document.querySelector('meta[name="assistant-api"]').content;
 const SUGGESTION_KEYS = ["chat.q1", "chat.q2", "chat.q3", "chat.q4"];
-const REDUCED_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
+// const REDUCED_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
 // On touch screens, focusing the input opens the keyboard, which hides the suggestions.
 const FINE_POINTER = matchMedia("(pointer: fine)").matches;
 
@@ -74,7 +74,7 @@ async function typeGreeting() {
   const bubble = addMessage("assistant");
   for (const [i, word] of t("chat.greeting").split(" ").entries()) {
     bubble.append(i ? ` ${word}` : word);
-    if (!REDUCED_MOTION) await sleep(40 + Math.random() * 60);
+    /*if (!REDUCED_MOTION) */await sleep(40 + Math.random() * 60);
   }
   chatLog.setAttribute("aria-busy", "false");
 }
