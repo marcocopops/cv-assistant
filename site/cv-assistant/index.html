@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-i18n="chat.pageTitle">CV Assistant</title>
+  <!-- Production API endpoint; chat.js switches to localhost during development. -->
+  <meta name="assistant-api" content="https://api.marcantoine-meunier.com">
+  <link rel="stylesheet" href="/assets/style.css">
+  <script type="module" src="/assets/chat.js"></script>
+</head>
+<body class="chat-page">
+  <header class="chat-header">
+    <a href="/" data-i18n="chat.back"></a>
+    <strong data-i18n="project.cv.title"></strong>
+    <div class="end">
+      <nav class="lang-switch" aria-label="Language"></nav>
+      <a href="https://github.com/marcocopops/cv-assistant" data-i18n="chat.source"></a>
+    </div>
+  </header>
+
+  <main id="chat-log" class="chat-log" aria-live="polite"></main>
+
+  <footer class="composer" hidden>
+    <form id="chat-form">
+      <label for="chat-input" class="visually-hidden" data-i18n="chat.inputLabel"></label>
+      <input id="chat-input" type="text" minlength="3" maxlength="500" autocomplete="off" required
+             data-i18n-placeholder="chat.placeholder">
+      <button type="submit" data-i18n="chat.send"></button>
+    </form>
+    <div class="suggestions">
+      <p data-i18n="chat.suggestions"></p>
+      <div id="suggestion-list"></div>
+    </div>
+    <p class="notice" data-i18n="chat.notice"></p>
+  </footer>
+
+  <noscript><p class="page">Ce site nécessite JavaScript.</p></noscript>
+</body>
+</html>

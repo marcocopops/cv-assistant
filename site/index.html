@@ -3,85 +3,44 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Marc-Antoine Meunier — Ingénieur logiciel</title>
-  <meta name="description" content="CV de Marc-Antoine Meunier, ingénieur logiciel temps réel et systèmes embarqués.">
-
-  <!-- Production API endpoint; chat.js switches to localhost during development. -->
-  <meta name="assistant-api" content="https://api.marcantoine-meunier.com">
-
-  <link rel="stylesheet" href="style.css">
-  <script src="chat.js" defer></script>
+  <title data-i18n="home.pageTitle">Marc-Antoine Meunier</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <script type="module" src="/assets/i18n.js"></script>
 </head>
 <body>
-  <header>
-    <h1>Marc-Antoine Meunier</h1>
-    <p class="tagline">Ingénieur logiciel</p>
-    <nav aria-label="Liens">
-      <a href="#assistant">Poser une question</a>
-      <a href="https://github.com/marcocopops/">GitHub</a>
-    </nav>
-  </header>
-
-  <main>
-    <section aria-labelledby="experience-title">
-      <h2 id="experience-title">Expérience</h2>
-      <article>
-        <h3>Ingénieur logiciel</h3>
-        <p class="period">2021 – aujourd'hui</p>
-        <p>Développement de logiciels temps réel pour des systèmes
-           critiques aux ressources contraintes, au sein d'une équipe agile.</p>
-      </article>
-    </section>
-
-    <section aria-labelledby="education-title">
-      <h2 id="education-title">Formation</h2>
-      <article>
-        <h3>Diplôme d'ingénieur — ECE Paris</h3>
-        <p>Master d'ingénieur, spécialisation systèmes embarqués.</p>
-      </article>
-    </section>
-
-    <section aria-labelledby="projects-title">
-      <h2 id="projects-title">Projets</h2>
-      <article>
-        <h3>Assistant de ce site</h3>
-        <p>Recherche sémantique (RAG) sur mon CV avec un LLM hébergé chez moi :
-           Ollama, PostgreSQL/pgvector, API FastAPI en streaming, conteneurs Docker durcis.
-           <a href="https://github.com/marcocopops/cv-assistant">Code source</a></p>
-      </article>
-      <article>
-        <h3>Homelab</h3>
-        <p>Serveur Debian auto-hébergé : Docker, accès distant par VPN (Tailscale),
-           DNS filtrant (Pi-hole), pare-feu et durcissement.</p>
-      </article>
-    </section>
-
-    <section id="assistant" aria-labelledby="assistant-title">
-      <h2 id="assistant-title">Posez une question sur mon parcours</h2>
-      <p class="hint">Un assistant IA, projet personnel hébergé sur mon serveur, répond à partir
-         de mon CV. Il peut se tromper : en cas de doute, contactez-moi. Les questions et
-         réponses sont conservées 90 jours pour améliorer l'assistant et détecter les abus :
-         n'y saisissez pas d'informations personnelles.</p>
-
-      <div class="suggestions">
-        <button type="button" data-question="Quelle est sa formation ?">Sa formation</button>
-        <button type="button" data-question="Sur quels types de systèmes a-t-il travaillé ?">Son expérience</button>
-        <button type="button" data-question="Quels sont ses projets personnels ?">Ses projets</button>
+  <div class="page">
+    <header class="site-header">
+      <div>
+        <h1>Marc-Antoine Meunier</h1>
+        <p data-i18n="home.tagline"></p>
       </div>
+      <nav class="lang-switch" aria-label="Language"></nav>
+    </header>
 
-      <div id="chat-log" aria-live="polite"></div>
+    <nav class="links" aria-label="Links">
+      <a href="https://www.linkedin.com/in/marc-antoine-meunier-2906bb133/">LinkedIn</a>
+      <a href="https://github.com/marcocopops">GitHub</a>
+      <a href="mailto:contact@marcantoine-meunier.com" data-i18n="home.contact"></a>
+    </nav>
 
-      <form id="chat-form">
-        <label for="chat-input" class="visually-hidden">Votre question</label>
-        <input id="chat-input" type="text" minlength="3" maxlength="500"
-               placeholder="Votre question…" autocomplete="off" required>
-        <button type="submit">Envoyer</button>
-      </form>
-    </section>
-  </main>
-
-  <footer>
-    <p>Page statique · assistant hébergé sur mon homelab</p>
-  </footer>
+    <main>
+      <article class="card">
+        <h2 data-i18n="project.cv.title"></h2>
+        <p data-i18n="project.cv.description"></p>
+        <ul class="tags">
+          <li>RAG</li>
+          <li>Llama 3.1</li>
+          <li>pgvector</li>
+          <li>FastAPI</li>
+          <li>Cloudflare</li>
+        </ul>
+        <div class="actions">
+          <a class="button primary" href="/cv-assistant/" data-i18n="project.try"></a>
+          <a class="button" href="https://github.com/marcocopops/cv-assistant" data-i18n="project.source"></a>
+        </div>
+      </article>
+    </main>
+  </div>
+  <noscript><p class="page">Ce site nécessite JavaScript.</p></noscript>
 </body>
 </html>

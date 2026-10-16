@@ -1,0 +1,172 @@
+:root {
+  --bg: #fafaf9;
+  --fg: #1c1917;
+  --muted: #6b6560;
+  --accent: #1d4ed8;
+  --on-accent: #ffffff;
+  --surface: #efeeec;
+  --border: #dedbd7;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161514;
+    --fg: #e7e5e4;
+    --muted: #a8a29e;
+    --accent: #93c5fd;
+    --on-accent: #0b1220;
+    --surface: #24221f;
+    --border: #3a3633;
+  }
+}
+
+* { box-sizing: border-box; }
+
+/* Author display rules would otherwise override the hidden attribute. */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  font: 1rem/1.6 system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+a { color: var(--accent); }
+
+/* --- Shared --- */
+
+.lang-switch { display: flex; gap: .6rem; font-size: .85rem; }
+.lang-switch a[aria-current] { color: var(--fg); font-weight: 600; text-decoration: none; }
+
+button, .button {
+  display: inline-block;
+  padding: .45rem .9rem;
+  border: 1px solid var(--border);
+  border-radius: .6rem;
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.button.primary, button[type="submit"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+button:disabled { opacity: .5; cursor: not-allowed; }
+
+/* --- Home page --- */
+
+.page { max-width: 44rem; margin: 0 auto; padding: 3rem 1rem; }
+.site-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.site-header h1 { margin: 0; font-size: 1.8rem; }
+.site-header p { margin: .25rem 0 0; color: var(--muted); }
+.links { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0 2.5rem; }
+
+.card {
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+.card h2 { margin: 0 0 .25rem; font-size: 1.2rem; }
+.card p { margin: 0; }
+.tags { display: flex; flex-wrap: wrap; gap: .4rem; margin: .9rem 0 1.1rem; padding: 0; list-style: none; }
+.tags li {
+  padding: .1rem .6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: .8rem;
+}
+.actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+
+/* --- Chat page --- */
+
+.chat-page { display: grid; grid-template-rows: auto 1fr auto; height: 100dvh; }
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: .75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.chat-header .end { display: flex; align-items: center; gap: 1rem; }
+
+/* Side padding centres a 46rem column while the scrollbar stays at the window edge. */
+.chat-log, .composer { padding-left: max(1rem, calc((100% - 46rem) / 2)); padding-right: max(1rem, calc((100% - 46rem) / 2)); }
+
+.chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+  overflow-y: auto;
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+}
+
+.message {
+  max-width: 85%;
+  padding: .65rem .95rem;
+  border-radius: 1rem;
+  white-space: pre-wrap;
+  animation: fade-in .2s ease-out;
+}
+.message.user {
+  align-self: flex-end;
+  border-bottom-right-radius: .3rem;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.message.assistant { align-self: flex-start; border-bottom-left-radius: .3rem; background: var(--surface); }
+.message.pending { color: var(--muted); font-style: italic; animation: pulse 1.5s ease-in-out infinite; }
+.message.failed { color: var(--muted); }
+.note { display: block; margin-top: .4rem; color: var(--muted); font-size: .78rem; white-space: normal; }
+
+.composer {
+  padding-top: .75rem;
+  padding-bottom: 1rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  animation: fade-in .3s ease-out;
+}
+#chat-form { display: flex; gap: .5rem; }
+#chat-input {
+  flex: 1;
+  min-width: 0;
+  padding: .6rem .85rem;
+  border: 1px solid var(--border);
+  border-radius: .75rem;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit; /* 16px: smaller inputs make iOS zoom in on focus */
+}
+
+.suggestions { margin-top: .6rem; }
+.suggestions p { margin: 0 0 .35rem; color: var(--muted); font-size: .8rem; }
+#suggestion-list { display: flex; flex-wrap: wrap; gap: .4rem; }
+#suggestion-list button { padding: .3rem .75rem; border-radius: 999px; font-size: .85rem; }
+
+.notice { margin: .6rem 0 0; color: var(--muted); font-size: .72rem; }
+
+@keyframes fade-in { from { opacity: 0; transform: translateY(4px); } }
+@keyframes pulse { 50% { opacity: .4; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
