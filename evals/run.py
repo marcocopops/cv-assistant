@@ -17,6 +17,9 @@ Each case is a TOML table with:
   must_contain     terms that must all appear in the answer (optional)
   must_not_contain terms that must never appear in the answer (optional)
   expected_failure true for a known, accepted failure: reported but not blocking (optional)
+  
+  Optional top-level key:
+  language_ignore  terms removed from answers before checking their language (e.g. names)
 """
 import argparse
 import asyncio
@@ -61,8 +64,7 @@ class Result:
 def contains(text: str, term: str) -> bool:
     return term.casefold() in text.casefold()
 
-
-async def run_case(pool, client: httpx.AsyncClient, case: dict) -> Result:
+async def run_case(pool, client: httpx.AsyncClient, case: dict, language_ignore: list[str]) -> Result:
     result = Result(case["id"], case["question"])
     result.expected_failure = case.get("expected_failure", False)
     start = time.monotonic()
@@ -106,8 +108,13 @@ async def run_case(pool, client: httpx.AsyncClient, case: dict) -> Result:
             if contains(result.answer, term):
                 fail(f"reveals internal context ('{term}')")
 
-    if (lang := case.get("lang")) and (detected := core.detect_lang(result.answer, lang)) != lang:
-        fail(f"answered in '{detected}' instead of '{lang}'")
+    if lang := case.get("lang"):
+        # Proper nouns such as the owner's name carry no language signal and bias detection.
+        text = result.answer
+        for term in language_ignore:
+            text = text.replace(term, "")
+        if (detected := core.detect_lang(text, lang)) != lang:
+            fail(f"answered in '{detected}' instead of '{lang}'")
 
     return result
 
@@ -144,12 +151,14 @@ def calibration_lines(cases: list[dict], results: list[Result]) -> list[str]:
 async def main(path: str) -> int:
     cases_file = Path(path)
     with cases_file.open("rb") as f:
-        cases = tomllib.load(f)["case"]
+        data = tomllib.load(f)
+    cases = data["case"]
+    language_ignore = data.get("language_ignore", [])
 
     results = []
     async with core.make_pool() as pool, httpx.AsyncClient(timeout=300) as client:
         for case in cases:  # sequential on purpose: the CPU runs one generation at a time
-            r = await run_case(pool, client, case)
+            r = await run_case(pool, client, case, language_ignore)
             print("\n".join(format_result(r, with_timing=True)), flush=True)
             results.append(r)
 
