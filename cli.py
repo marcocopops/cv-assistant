@@ -38,15 +38,17 @@ async def run_ask(question: str) -> None:
 async def run_history(limit: int) -> None:
     async with core.make_pool() as pool, pool.connection() as conn:
         cur = await conn.execute(
-            "SELECT created_at, client_ip, country, status, used_llm, top_score, question, answer "
-            "FROM interactions ORDER BY created_at DESC LIMIT %s",
+            "SELECT created_at, client_ip, country, status, used_llm, top_score, duration_ms, user_agent, "
+            "question, answer FROM interactions ORDER BY created_at DESC LIMIT %s",
             (limit,),
         )
         rows = await cur.fetchall()
-    for created, ip, country, status, used_llm, score, question, answer in reversed(rows):
+    for created, ip, country, status, used_llm, score, duration, agent, question, answer in reversed(rows):
         llm = "LLM" if used_llm else "no LLM"
         score_text = f"{score:.3f}" if score is not None else "-"
-        print(f"{created.astimezone():%Y-%m-%d %H:%M}  {ip}  {country or '-'}  {status}  {llm}  score {score_text}")
+        print(f"{created.astimezone():%Y-%m-%d %H:%M}  {ip}  {country or '-'}  {status}  {llm}  "
+              f"score {score_text}  {duration or 0} ms")
+        print(f"  UA: {agent}")
         print(f"  Q: {question}")
         print("  A: " + answer.replace("\n", "\n     ") + "\n")
 
